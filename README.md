@@ -33,4 +33,8 @@ if ( ViewportClient->HideCursorDuringCapture() && bShouldShowMouseCursor )
 }
 ```
 
-Unfortunately, as this function is not virtual, it does not seem possible to change this.
+And subsequent uses of `MousePosBeforeHiddenDueToCapture`.
+
+Some of these may be removable without engine modification by creating a child of `UGameViewportClient`
+and overriding the input functions (such as `OnMouseButtonUp`) to remove references of
+`SetMousePos(MousePosBeforeHiddenDueToCapture)`, but this is up to the individual developer.
