@@ -12,9 +12,7 @@ public:
 	FExtendedAnalogCursor(ULocalPlayer* InLocalPlayer, UWorld* InWorld, float _Radius);
 	FExtendedAnalogCursor(class APlayerController* PlayerController, float _Radius);
 
-	virtual ~FExtendedAnalogCursor()
-	{
-	}
+	virtual ~FExtendedAnalogCursor() {}
 
 	virtual int32 GetOwnerUserIndex() const override;
 
@@ -25,6 +23,17 @@ public:
 	virtual bool HandleMouseButtonUpEvent(FSlateApplication& SlateApp, const FPointerEvent& MouseEvent) override;
 
 	virtual void Tick(const float DeltaTime, FSlateApplication& SlateApp, TSharedRef<ICursor> Cursor) override;
+
+	/** 
+	* Sets whether the cursor is clamped to the viewport. 
+	* This will also immediately clamp the cursor's position if
+	* it was outside the viewport.
+	* 
+	* This will also reset the cursor's position even if the user 
+	* has last used a mouse, which is not necessarily an intended 
+	* effect but one that may be a necessary evil. - Yoneech
+	*/
+	void SetClampToViewport(bool bNewClampToViewport);
 
 	FORCEINLINE FName GetHoveredWidgetName() const
 	{
@@ -66,6 +75,11 @@ public:
 		AnalogStick = CursorMovementStick;
 	}
 
+	FORCEINLINE bool CheckClampToViewport() const
+	{
+		return bClampToViewport;
+	}
+
 	uint8 bDebugging : 1;
 
 	uint8 bAnalogDebug : 1;
@@ -95,6 +109,9 @@ private:
 
 	/** Is this thing even active right now? */
 	bool bIsUsingAnalogCursor;
+
+	/** True if the cursor should clamp to the player's viewport. */
+	bool bClampToViewport;
 
 	/** The radius of the analog cursor */
 	float Radius;

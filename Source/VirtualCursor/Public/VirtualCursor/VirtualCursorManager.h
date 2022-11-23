@@ -58,9 +58,20 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Cursor")
 	bool ContainsGamepadCursorInputProcessor() const;
 
+	/** Sets whether the cursor is clamped to the viewport. */
+	UFUNCTION(BlueprintCallable, Category="Cursor")
+	void SetClampCursorToViewport(bool bNewClamp);
+
+	/** Toggles whether the cursor is clamped to the viewport. */
+	UFUNCTION(BlueprintCallable, Category = "Cursor")
+	void ToggleClampCursorToViewport();
+
+	/** Returns true if the cursor should clamp to the viewport. */
+	UFUNCTION(BlueprintPure, Category = "Cursor")
+		bool CheckClampCursorToViewport() const;
+
 protected:
 
-	FVector2D GetViewportCenterUVFromLocalPlayer(ULocalPlayer* localPlayer) const;
 
 private:
 
