@@ -3,6 +3,7 @@
 #include "Blueprint/WidgetLayoutLibrary.h"
 #include "Engine/UserInterfaceSettings.h"
 #include "Engine/Engine.h"
+#include "GameMapsSettings.h"
 
 
 bool IsWidgetInteractable(const TSharedPtr<SWidget> Widget)
@@ -53,16 +54,33 @@ int32 FExtendedAnalogCursor::GetOwnerUserIndex() const
 
 bool FExtendedAnalogCursor::HandleKeyDownEvent(FSlateApplication& SlateApp, const FKeyEvent& InKeyEvent)
 {
+	// If we assigned the first gamepad to player 2, we need to modify the
+	// user index of the event.
+	// This bool is not cached because some games may allow for this to 
+	// change in real-time through game settings.
+	UGameMapsSettings* gameSettings = GetMutableDefault<UGameMapsSettings>();
+	const bool bSkipGamepadPlayer1 = gameSettings->GetSkipAssigningGamepadToPlayer1();
+	FKeyEvent newInKeyEvent = InKeyEvent;
+	if (bSkipGamepadPlayer1)
+		newInKeyEvent = FKeyEvent(
+			InKeyEvent.GetKey(),
+			InKeyEvent.GetModifierKeys(),
+			InKeyEvent.GetUserIndex() + 1,
+			InKeyEvent.IsRepeat(),
+			InKeyEvent.GetCharacter(),
+			InKeyEvent.GetKeyCode()
+		);
+
 	// So we only read from the correct player index (to handle for local coop)
-	if (!IsRelevantInput(InKeyEvent))
+	if (!IsRelevantInput(newInKeyEvent))
 	{
 		// If the index of whoever pressed a key is not this cursor's index then its another local player(so they dont control the inputs)
 		return false;
 	}
 
-	const FKey& PressedKey = InKeyEvent.GetKey();
+	const FKey& PressedKey = newInKeyEvent.GetKey();
 
-	if (InKeyEvent.IsRepeat())
+	if (newInKeyEvent.IsRepeat())
 	{
 		if (bDebugging)
 		{
@@ -78,20 +96,37 @@ bool FExtendedAnalogCursor::HandleKeyDownEvent(FSlateApplication& SlateApp, cons
 		}
 	}
 
-	return FAnalogCursor::HandleKeyDownEvent(SlateApp, InKeyEvent);
+	return FAnalogCursor::HandleKeyDownEvent(SlateApp, newInKeyEvent);
 }
 
 
 bool FExtendedAnalogCursor::HandleKeyUpEvent(FSlateApplication& SlateApp, const FKeyEvent& InKeyEvent)
 {
+	// If we assigned the first gamepad to player 2, we need to modify the
+	// user index of the event.
+	// This bool is not cached because some games may allow for this to 
+	// change in real-time through game settings.
+	UGameMapsSettings* gameSettings = GetMutableDefault<UGameMapsSettings>();
+	const bool bSkipGamepadPlayer1 = gameSettings->GetSkipAssigningGamepadToPlayer1();
+	FKeyEvent newInKeyEvent = InKeyEvent;
+	if (bSkipGamepadPlayer1)
+		newInKeyEvent = FKeyEvent(
+			InKeyEvent.GetKey(),
+			InKeyEvent.GetModifierKeys(),
+			InKeyEvent.GetUserIndex() + 1,
+			InKeyEvent.IsRepeat(),
+			InKeyEvent.GetCharacter(),
+			InKeyEvent.GetKeyCode()
+		);
+
 	// So we only read from the correct player index(to handle for local coop)
-	if (!IsRelevantInput(InKeyEvent))
+	if (!IsRelevantInput(newInKeyEvent))
 	{
 		// If the index of whoever pressed a key is not this cursor's index then its another local player(so they dont control the inputs)
 		return false;
 	}
 
-	const FKey& ReleasedKey = InKeyEvent.GetKey();
+	const FKey& ReleasedKey = newInKeyEvent.GetKey();
 
 	PressedKeys.Remove(ReleasedKey);
 	if (bDebugging)
@@ -99,43 +134,82 @@ bool FExtendedAnalogCursor::HandleKeyUpEvent(FSlateApplication& SlateApp, const 
 		GEngine->AddOnScreenDebugMessage(-1, 5.0f, FColor::Cyan, "KEY: " + ReleasedKey.ToString() + " Released");
 	}
 
-	return FAnalogCursor::HandleKeyUpEvent(SlateApp, InKeyEvent);
+	return FAnalogCursor::HandleKeyUpEvent(SlateApp, newInKeyEvent);
 }
 
 
 bool FExtendedAnalogCursor::HandleAnalogInputEvent(FSlateApplication& SlateApp, const FAnalogInputEvent& InAnalogInputEvent)
 {
+	// If we assigned the first gamepad to player 2, we need to modify the
+	// user index of the event.
+	// This bool is not cached because some games may allow for this to 
+	// change in real-time through game settings.
+	UGameMapsSettings* gameSettings = GetMutableDefault<UGameMapsSettings>();
+	const bool bSkipGamepadPlayer1 = gameSettings->GetSkipAssigningGamepadToPlayer1();
+	FAnalogInputEvent newInAnalogInputEvent = InAnalogInputEvent;
+	if (bSkipGamepadPlayer1)
+		newInAnalogInputEvent = FAnalogInputEvent(
+			InAnalogInputEvent.GetKey(),
+			InAnalogInputEvent.GetModifierKeys(),
+			InAnalogInputEvent.GetUserIndex() + 1,
+			InAnalogInputEvent.IsRepeat(),
+			InAnalogInputEvent.GetCharacter(),
+			InAnalogInputEvent.GetKeyCode(),
+			InAnalogInputEvent.GetAnalogValue()
+		);
+
 	// So we only read from the correct player index(to handle for local coop)
-	if (!IsRelevantInput(InAnalogInputEvent))
+	if (!IsRelevantInput(newInAnalogInputEvent))
 	{
 		// If the index of whoever pressed a key is not this cursor's index then its another local player(so they dont control the inputs)
 		return false;
 	}
 
 	// Prevent Slate from swallowing events that aren't relevant to our virtual cursor
-	if (!IsCursorStickInput(InAnalogInputEvent))
+	if (!IsCursorStickInput(newInAnalogInputEvent))
 	{
 		return false;
 	}
 
 	if (bAnalogDebug)
 	{
-		GEngine->AddOnScreenDebugMessage(-1, 5.0f, FColor::Red, "ANALOG: " + InAnalogInputEvent.GetKey().ToString());
+		GEngine->AddOnScreenDebugMessage(-1, 5.0f, FColor::Red, "ANALOG: " + newInAnalogInputEvent.GetKey().ToString());
 	}
-	return FAnalogCursor::HandleAnalogInputEvent(SlateApp, InAnalogInputEvent);
+	return FAnalogCursor::HandleAnalogInputEvent(SlateApp, newInAnalogInputEvent);
 }
 
 
 bool FExtendedAnalogCursor::HandleMouseButtonDownEvent(FSlateApplication& SlateApp, const FPointerEvent& MouseEvent)
 {
+	// If we assigned the first gamepad to player 2, we need to modify the
+	// user index of the event only if it came from a gamepad.
+	// This bool is not cached because some games may allow for this to 
+	// change in real-time through game settings.
+	UGameMapsSettings* gameSettings = GetMutableDefault<UGameMapsSettings>();
+	const bool bSkipGamepadPlayer1 = gameSettings->GetSkipAssigningGamepadToPlayer1();
+	FPointerEvent newMouseEvent = MouseEvent;
+	if (bSkipGamepadPlayer1 && MouseEvent.GetPressedButtons().Num() <= 0 && !MouseEvent.IsTouchEvent())
+		// GetPressedButtons is empty if this event came from simulating a mouse press through a gamepad.
+	// This is true in UE4.25, but may not be true in future versions.
+		newMouseEvent = FPointerEvent(
+			newMouseEvent.GetUserIndex() + 1,
+			newMouseEvent.GetPointerIndex(),
+			newMouseEvent.GetScreenSpacePosition(),
+			newMouseEvent.GetLastScreenSpacePosition(),
+			newMouseEvent.GetPressedButtons(),
+			newMouseEvent.GetEffectingButton(),
+			newMouseEvent.GetWheelDelta(),
+			newMouseEvent.GetModifierKeys()
+		);
+
 	// So we only read from the correct player index(to handle for local coop)
-	if (!IsRelevantInput(MouseEvent))
+	if (!IsRelevantInput(newMouseEvent))
 	{
 		// If the index of whoever pressed a key is not this cursor's index then its another local player(so they dont control the inputs)
 		return false;
 	}
 
-	const FKey& PressedKey = MouseEvent.GetEffectingButton();
+	const FKey& PressedKey = newMouseEvent.GetEffectingButton();
 	if (PressedKeys.Contains(PressedKey))
 	{
 		if (bDebugging)
@@ -157,14 +231,35 @@ bool FExtendedAnalogCursor::HandleMouseButtonDownEvent(FSlateApplication& SlateA
 
 bool FExtendedAnalogCursor::HandleMouseButtonUpEvent(FSlateApplication& SlateApp, const FPointerEvent& MouseEvent)
 {
+	// If we assigned the first gamepad to player 2, we need to modify the
+	// user index of the event only if it came from a gamepad.
+	// This bool is not cached because some games may allow for this to 
+	// change in real-time through game settings.
+	UGameMapsSettings* gameSettings = GetMutableDefault<UGameMapsSettings>();
+	const bool bSkipGamepadPlayer1 = gameSettings->GetSkipAssigningGamepadToPlayer1();
+	FPointerEvent newMouseEvent = MouseEvent;
+	if (bSkipGamepadPlayer1 && MouseEvent.GetPressedButtons().Num() <= 0 && !MouseEvent.IsTouchEvent())
+		// GetPressedButtons is empty if this event came from simulating a mouse press through a gamepad.
+		// This is true in UE4.25, but may not be true in future versions.
+		newMouseEvent = FPointerEvent(
+			newMouseEvent.GetUserIndex() + 1,
+			newMouseEvent.GetPointerIndex(),
+			newMouseEvent.GetScreenSpacePosition(),
+			newMouseEvent.GetLastScreenSpacePosition(),
+			newMouseEvent.GetPressedButtons(),
+			newMouseEvent.GetEffectingButton(),
+			newMouseEvent.GetWheelDelta(),
+			newMouseEvent.GetModifierKeys()
+		);
+
 	// So we only read from the correct player index(to handle for local coop)
-	if (!IsRelevantInput(MouseEvent))
+	if (!IsRelevantInput(newMouseEvent))
 	{
 		// If the index of whoever pressed a key is not this cursor's index then its another local player(so they dont control the inputs)
 		return false;
 	}
 
-	const FKey& ReleasedKey = MouseEvent.GetEffectingButton();
+	const FKey& ReleasedKey = newMouseEvent.GetEffectingButton();
 	if (bDebugging)
 	{
 		GEngine->AddOnScreenDebugMessage(-1, 5.0f, FColor::Cyan, "MOUSE: " + ReleasedKey.ToString() + " Released");
@@ -176,6 +271,7 @@ bool FExtendedAnalogCursor::HandleMouseButtonUpEvent(FSlateApplication& SlateApp
 
 void FExtendedAnalogCursor::Tick(const float DeltaTime, FSlateApplication& SlateApp, TSharedRef<ICursor> Cursor)
 {
+	TSharedRef<FSlateUser> slateUser = SlateApp.GetUser(GetOwnerUserIndex()).ToSharedRef();
 	if (PlayerContext.IsValid() && PlayerContext.GetPlayerController())
 	{
 		const FVector2D ViewportSize = UWidgetLayoutLibrary::GetViewportSize(PlayerContext.GetPlayerController());
@@ -186,9 +282,9 @@ void FExtendedAnalogCursor::Tick(const float DeltaTime, FSlateApplication& Slate
 		// Set the current position if we haven't already
 		static const float MouseMoveSizeBuffer = 2.0f;
 		const FVector2D CurrentPositionTruc = FVector2D(FMath::TruncToFloat(CurrentPosition.X), FMath::TruncToFloat(CurrentPosition.Y));
-		if (CurrentPositionTruc != Cursor->GetPosition())
+		if (CurrentPositionTruc != slateUser->GetCursorPosition())
 		{
-			CurrentPosition = Cursor->GetPosition();
+			CurrentPosition = slateUser->GetCursorPosition();
 			Velocity = FVector2D::ZeroVector;
 			LastCursorDirection = FVector2D::ZeroVector;
 			bIsUsingAnalogCursor = false;
@@ -277,7 +373,7 @@ void FExtendedAnalogCursor::Tick(const float DeltaTime, FSlateApplication& Slate
 		CurrentPosition += (Velocity * DeltaTime);
 
 		// Update the cursor position
-		UpdateCursorPosition(SlateApp, SlateApp.GetUser(GetOwnerUserIndex()).ToSharedRef(), CurrentPosition);
+		UpdateCursorPosition(SlateApp, slateUser, CurrentPosition);
 
 		// If we get here, and we are moving the stick, then hooray
 		if (!AccelFromAnalogStick.IsZero())

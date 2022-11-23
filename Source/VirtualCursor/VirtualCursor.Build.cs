@@ -16,6 +16,7 @@ public class VirtualCursor : ModuleRules
 				"CoreUObject", 
 				"Engine", 
 				"InputCore",
+                "EngineSettings",
 #if UE_4_26_OR_LATER
 				"DeveloperSettings",
 #endif		
