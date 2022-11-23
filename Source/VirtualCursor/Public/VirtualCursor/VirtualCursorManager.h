@@ -58,6 +58,10 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Cursor")
 	bool ContainsGamepadCursorInputProcessor() const;
 
+protected:
+
+	FVector2D GetViewportCenterUVFromLocalPlayer(ULocalPlayer* localPlayer) const;
+
 private:
 
 	TSharedPtr<FExtendedAnalogCursor> Cursor;

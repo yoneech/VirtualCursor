@@ -190,7 +190,7 @@ bool FExtendedAnalogCursor::HandleMouseButtonDownEvent(FSlateApplication& SlateA
 	FPointerEvent newMouseEvent = MouseEvent;
 	if (bSkipGamepadPlayer1 && MouseEvent.GetPressedButtons().Num() <= 0 && !MouseEvent.IsTouchEvent())
 		// GetPressedButtons is empty if this event came from simulating a mouse press through a gamepad.
-	// This is true in UE4.25, but may not be true in future versions.
+		// This is true in UE4.25, but may not be true in future versions.
 		newMouseEvent = FPointerEvent(
 			newMouseEvent.GetUserIndex() + 1,
 			newMouseEvent.GetPointerIndex(),
