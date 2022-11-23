@@ -69,7 +69,7 @@ void UVirtualCursorManager::EnableAnalogCursor(const bool bUseLeftStick)
 
 			// Fake a button click so that the window has capture and focus. 
 			// Otherwise the cursor will not appear until the user presses a button.
-			FSlateApplication::Get().ProcessMouseButtonDownEvent(nullptr,FPointerEvent(GetLocalPlayer()->GetControllerId(),0, cursorStartingPosition, cursorStartingPosition,true));
+			FSlateApplication::Get().ProcessMouseButtonDownEvent(nullptr,FPointerEvent(GetLocalPlayer()->GetControllerId(), 0, cursorStartingPosition, cursorStartingPosition, 0.0f, true));
 		}
 		FSlateApplication::Get().SetCursorRadius(CursorRadius);
 	}
