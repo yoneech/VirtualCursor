@@ -20,8 +20,8 @@ local multiplayer without the need for any engine modifications.
 If you do not want to make any engine modifications, make sure set `Hide Cursor During Capture`
 to `false` when setting the PlayerController's input mode to `UI` or `Game and UI`.
 
-Setting `Hide Cursor During Capture` to `true` will cause a visual bug in which Player 1's cursor will
-jump to the location of other cursors whenever they click.
+Setting `Hide Cursor During Capture` to `true` will cause Player 1's cursor to jump to the
+location of other cursors whenever they click.
 
 This is caused by the following lines in `FSceneViewport::AcquireFocusAndCapture` (present in 4.25)
 
