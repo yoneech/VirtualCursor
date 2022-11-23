@@ -11,4 +11,26 @@ Original plugin creator: [Rama (EverNewJoy)](https://forums.unrealengine.com/com
 
 [Other contributors](https://github.com/bphelan/VirtualCursor/graphs/contributors)
 
+## Notes About This Fork
 
+This fork of the VirtualCursor was modified with the intent to provide support for
+local multiplayer without the need for any engine modifications.
+
+### Important Note
+If you do not want to make any engine modifications, make sure set `Hide Cursor During Capture`
+to `false` when setting the PlayerController's input mode to `UI` or `Game and UI`.
+
+Setting `Hide Cursor During Capture` to `true` will cause a visual bug in which Player 1's cursor will
+jump to the location of other cursors whenever they click.
+
+This is caused by the following lines in `FSceneViewport::AcquireFocusAndCapture` (present in 4.25)
+
+```
+if ( ViewportClient->HideCursorDuringCapture() && bShouldShowMouseCursor )
+{
+   bCursorHiddenDueToCapture = true;
+   MousePosBeforeHiddenDueToCapture = MousePosition;
+}
+```
+
+Unfortunately, as this function is not virtual, it does not seem possible to change this.
