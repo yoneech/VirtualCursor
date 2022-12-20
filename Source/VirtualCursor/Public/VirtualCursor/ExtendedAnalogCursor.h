@@ -86,6 +86,7 @@ public:
 
 protected:
 
+	bool GetAbsoluteClampedPosition(const FVector2D& inPosition, FVector2D& outPosition);
 
 private:
 

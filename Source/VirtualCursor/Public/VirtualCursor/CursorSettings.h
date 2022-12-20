@@ -108,6 +108,12 @@ public:
 	}
 
 
+	FORCEINLINE bool GetDefaultClampToViewport() const
+	{
+		return bDefaultClampToViewport;
+	}
+
+
 private:
 	UPROPERTY(config, EditAnywhere, Category = "Analog Cursor", meta=(
 		XAxisName="Strength",
@@ -149,4 +155,8 @@ private:
 	/** If true, AnalogCursorAccelerationCurve will be used as a Velocity Curve */
 	UPROPERTY(config, EditAnywhere, Category = "Analog Cursor")
 	bool bAnalogCursorNoAcceleration;
+
+	/** True if the cursors should clamp to their viewport by default. */
+	UPROPERTY(config, EditAnywhere, Category = "Analog Cursor")
+	bool bDefaultClampToViewport;
 };

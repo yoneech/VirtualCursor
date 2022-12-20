@@ -4,6 +4,7 @@
 #include "Blueprint/WidgetLayoutLibrary.h"
 #include "Engine/UserInterfaceSettings.h"
 #include "Engine/Engine.h"
+#include "Framework/Application/SlateUser.h"
 #include "GameMapsSettings.h"
 #include "Slate/SGameLayerManager.h"
 #include "Widgets/SViewport.h"
@@ -23,11 +24,13 @@ FExtendedAnalogCursor::FExtendedAnalogCursor(ULocalPlayer* InLocalPlayer, UWorld
 	, LastCursorDirection(FVector2D::ZeroVector)
 	, HoveredWidgetName(NAME_None)
 	, bIsUsingAnalogCursor(false)
-	, bClampToViewport(true)
 	, Radius(FMath::Max<float>(_Radius, 16.0f))
 	, PlayerContext(InLocalPlayer, InWorld)
 {
 	ensure(PlayerContext.IsValid());
+
+	const UCursorSettings* settings = GetMutableDefault<UCursorSettings>();
+	bClampToViewport = settings->GetDefaultClampToViewport();
 }
 
 
@@ -39,11 +42,13 @@ FExtendedAnalogCursor::FExtendedAnalogCursor(class APlayerController* PlayerCont
 	, LastCursorDirection(FVector2D::ZeroVector)
 	, HoveredWidgetName(NAME_None)
 	, bIsUsingAnalogCursor(false)
-	, bClampToViewport(true)
 	, Radius(FMath::Max<float>(_Radius, 16.0f))
 	, PlayerContext(PlayerController)
 {
 	ensure(PlayerContext.IsValid());
+
+	const UCursorSettings* settings = GetMutableDefault<UCursorSettings>();
+	bClampToViewport = settings->GetDefaultClampToViewport();
 }
 
 
@@ -368,44 +373,50 @@ void FExtendedAnalogCursor::Tick(const float DeltaTime, FSlateApplication& Slate
 			Velocity = Velocity.GetSafeNormal() * MaxSpeed;
 		}
 
-		bool bClamped = false;
-		FBox2D viewportClamp = FBox2D();
+		//bool bClamped = false;
+		//FBox2D viewportClamp = FBox2D();
 
-		// Check to see if we should clamp the cursor's position.
-		if (bClampToViewport && !AccelFromAnalogStick.IsZero() && IsValid(GEngine) && IsValid(GEngine->GameViewport))
-		{
-			TSharedPtr<IGameLayerManager> gameLayerManager = GEngine->GameViewport->GetGameLayerManager();
-			if (gameLayerManager.IsValid())
-			{
-				// Get the player's viewport geometry to check that our cursor is within the bounds.
-				const FGeometry viewportGeometry = gameLayerManager->GetPlayerWidgetHostGeometry(PlayerContext.GetLocalPlayer());
-				const FVector2D playerViewportSize = viewportGeometry.GetLocalSize();
-				FVector2D localPosition = USlateBlueprintLibrary::AbsoluteToLocal(viewportGeometry, CurrentPosition + (Velocity * DeltaTime));
+		//// Check to see if we should clamp the cursor's position.
+		//if (bClampToViewport && IsValid(GEngine) && IsValid(GEngine->GameViewport))
+		//{
+		//	TSharedPtr<IGameLayerManager> gameLayerManager = GEngine->GameViewport->GetGameLayerManager();
+		//	if (gameLayerManager.IsValid())
+		//	{
+		//		// Get the player's viewport geometry to check that our cursor is within the bounds.
+		//		const FGeometry viewportGeometry = gameLayerManager->GetPlayerWidgetHostGeometry(PlayerContext.GetLocalPlayer());
+		//		const FVector2D playerViewportSize = viewportGeometry.GetLocalSize().RoundToVector();
+		//		FVector2D localPosition = USlateBlueprintLibrary::AbsoluteToLocal(viewportGeometry, CurrentPosition + (Velocity * DeltaTime));
 
-				// Check if we need to clamp. Reset the velocity if we do.
-				if (localPosition.X + Radius > playerViewportSize.X || localPosition.X - Radius < 0.0f)
-				{
-					bClamped = true;
-					Velocity.X = 0.0f;
-				}
-				if (localPosition.Y + Radius > playerViewportSize.Y || localPosition.Y - Radius < 0.0f)
-				{
-					bClamped = true;
-					Velocity.Y = 0.0f;
-				}
+		//		// Check if we need to clamp. Reset the velocity if we do.
+		//		if (localPosition.X + Radius > playerViewportSize.X || localPosition.X - Radius < 0.0f) 
+		//		{
+		//			bClamped = true;
+		//			Velocity.X = 0.0f;
+		//		}
+		//		if (localPosition.Y + Radius > playerViewportSize.Y || localPosition.Y - Radius < 0.0f)
+		//		{
+		//			bClamped = true;
+		//			Velocity.Y = 0.0f;
+		//		}
 
-				if (bClamped)
-				{
-					// Only perform this calculation if we actually need to clamp the position.
-					viewportClamp.Min = viewportGeometry.GetAbsolutePositionAtCoordinates(FVector2D(0.0f, 0.0f));
-					viewportClamp.Max = viewportGeometry.GetAbsolutePositionAtCoordinates(FVector2D(1.0f, 1.0f));
-				}
+		//		if (bClamped)
+		//		{
+		//			// Only perform this calculation if we actually need to clamp the position.
+		//			viewportClamp.Min = viewportGeometry.GetAbsolutePositionAtCoordinates(FVector2D(0.0f, 0.0f));
+		//			viewportClamp.Max = viewportGeometry.GetAbsolutePositionAtCoordinates(FVector2D(1.0f, 1.0f));
+		//		}
 
-				// Why don't we just set the CurrentPosition here? We could, but because we only
-				// clamp one of the velocity axes, we still need to perform the velocity calculations below.
-				// This just seemed easier, to me. - Yoneech
-			}
-		}
+		//		UE_LOG(LogTemp, Warning, TEXT("%d | Loc: %s | Max: %s | Min: %s"), GetOwnerUserIndex(), *localPosition.ToString(), *viewportClamp.Max.ToString(), *viewportClamp.Min.ToString());
+
+		//		// Why don't we just set the CurrentPosition here? We could, but because we only
+		//		// clamp one of the velocity axes, we still need to perform the velocity calculations below.
+		//		// This just seemed easier, to me. - Yoneech
+		//	}
+		//}
+		const FVector2D nextPosition = CurrentPosition + (Velocity * DeltaTime);
+		FVector2D clampedPosition;
+		GetAbsoluteClampedPosition(nextPosition, clampedPosition);
+
 
 		//store off the last cursor direction
 		if (!Velocity.IsZero())
@@ -414,14 +425,8 @@ void FExtendedAnalogCursor::Tick(const float DeltaTime, FSlateApplication& Slate
 		}
 
 		// Update the new position
-		CurrentPosition += (Velocity * DeltaTime);
-
-		if (bClamped)
-		{
-			// The position needs to be clamped. 
-			CurrentPosition.X = FMath::Clamp(CurrentPosition.X, viewportClamp.Min.X, viewportClamp.Max.X);
-			CurrentPosition.Y = FMath::Clamp(CurrentPosition.Y, viewportClamp.Min.Y, viewportClamp.Max.Y);
-		}
+		//CurrentPosition += (Velocity * DeltaTime);
+		CurrentPosition = bClampToViewport ? clampedPosition : nextPosition;
 
 		// Update the cursor position
 		UpdateCursorPosition(SlateApp, slateUser.ToSharedRef(), CurrentPosition);
@@ -440,21 +445,34 @@ void FExtendedAnalogCursor::SetClampToViewport(bool bNewClampToViewport)
 {
 	bClampToViewport = bNewClampToViewport;
 
-	if (!bClampToViewport || !IsValid(GEngine) || !IsValid(GEngine->GameViewport) || bIsUsingAnalogCursor)
+	if (!bClampToViewport || !bIsUsingAnalogCursor || !IsValid(GEngine) || !IsValid(GEngine->GameViewport))
 		return;
+
+	FVector2D clampedPosition;
+	if (!GetAbsoluteClampedPosition(CurrentPosition, clampedPosition))
+		return;
+
+	CurrentPosition = clampedPosition;
+	Velocity.Set(0.0f, 0.0f);
+	LastCursorDirection.Set(0.0f, 0.0f);
+
+	UpdateCursorPosition(FSlateApplication::Get(), PlayerContext.GetLocalPlayer()->GetSlateUser().ToSharedRef(), CurrentPosition);
+}
+
+
+bool FExtendedAnalogCursor::GetAbsoluteClampedPosition(const FVector2D& inPosition, FVector2D& outPosition)
+{
+	if (!IsValid(GEngine) || !IsValid(GEngine->GameViewport))
+		return false;
 
 	TSharedPtr<IGameLayerManager> gameLayerManager = GEngine->GameViewport->GetGameLayerManager();
 	if (!gameLayerManager.IsValid())
-		return;
-
-	// Check to see if the cursor's position is outside of the bounds of the current geometry. 
-	// If so, clamp the position and reset the velocity.
-
-	const FGeometry viewportGeometry = gameLayerManager->GetPlayerWidgetHostGeometry(PlayerContext.GetLocalPlayer());
-	const FVector2D playerViewportSize = viewportGeometry.GetLocalSize();
-	FVector2D localPosition = USlateBlueprintLibrary::AbsoluteToLocal(viewportGeometry, CurrentPosition);
+		return false;
 
 	bool bClamped = false;
+	const FGeometry viewportGeometry = gameLayerManager->GetPlayerWidgetHostGeometry(PlayerContext.GetLocalPlayer());
+	const FVector2D playerViewportSize = viewportGeometry.GetLocalSize().RoundToVector();
+	FVector2D localPosition = USlateBlueprintLibrary::AbsoluteToLocal(viewportGeometry, inPosition);
 
 	if (localPosition.X + Radius > playerViewportSize.X)
 	{
@@ -477,14 +495,8 @@ void FExtendedAnalogCursor::SetClampToViewport(bool bNewClampToViewport)
 		localPosition.Y = Radius;
 	}
 
-	if (bClamped)
-	{
-		Velocity.Set(0.0f, 0.0f);
-		LastCursorDirection.Set(0.0f, 0.0f);
-
-		CurrentPosition = USlateBlueprintLibrary::LocalToAbsolute(viewportGeometry, localPosition);
-		UpdateCursorPosition(FSlateApplication::Get(), PlayerContext.GetLocalPlayer()->GetSlateUser().ToSharedRef(), CurrentPosition);
-	}
+	outPosition = USlateBlueprintLibrary::LocalToAbsolute(viewportGeometry, localPosition);
+	return bClamped;
 }
 
 
